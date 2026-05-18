@@ -1,3 +1,9 @@
+# ================================
+# Configuración
+# ================================
+
+$outputFile = "secrets_found.txt"
+
 $extensions = @(
     "*.txt","*.config","*.xml","*.json","*.ini",
     "*.log","*.env","*.yml","*.yaml","*.ps1","*.bat","*.cmd","*.cs"
@@ -15,15 +21,26 @@ $patterns = @(
     "connectionstring\s*[:=]\s*.+",
     "mongodb://.+",
     "Server=.*;Database=.*;User.*;Password=.*;",
-    "AKIA[0-9A-Z]{16}", 
+    "AKIA[0-9A-Z]{16}",
     "-----BEGIN PRIVATE KEY-----",
-    "[A-Fa-f0-9]{32}", 
-    "[A-Fa-f0-9]{64}"  
+    "[A-Fa-f0-9]{32}",
+    "[A-Fa-f0-9]{64}"
 )
 
 $excludeExtensions = @("*.dll","*.exe","*.png","*.jpg","*.jpeg","*.gif","*.zip","*.rar")
 
-Write-Host "`n[+] Buscando secretos en $(Get-Location)...`n" -ForegroundColor Cyan
+# Limpiar fichero anterior
+if (Test-Path $outputFile) {
+    Remove-Item $outputFile
+}
+
+"=== RESULTADOS DE BÚSQUEDA ===`n" | Out-File $outputFile -Encoding UTF8
+
+Write-Host "[+] Buscando secretos..." -ForegroundColor Cyan
+
+# ================================
+# Búsqueda
+# ================================
 
 Get-ChildItem -Recurse -File -Include $extensions -ErrorAction SilentlyContinue |
 Where-Object {
@@ -42,16 +59,27 @@ ForEach-Object {
 
             if ($matches) {
                 foreach ($match in $matches) {
-                    Write-Host "[!] Posible secreto encontrado:" -ForegroundColor Red
-                    Write-Host "    Archivo: $filePath"
-                    Write-Host "    Línea: $($match.LineNumber)"
-                    Write-Host "    Match: $($match.Line.Trim())`n"
+
+                    $line = "[!] Archivo: $filePath"
+                    $line2 = "    Línea: $($match.LineNumber)"
+                    $line3 = "    Match: $($match.Line.Trim())"
+                    $line4 = ""
+
+                    # Escribir en fichero
+                    $line  | Out-File $outputFile -Append
+                    $line2 | Out-File $outputFile -Append
+                    $line3 | Out-File $outputFile -Append
+                    $line4 | Out-File $outputFile -Append
+
+                    # Mostrar en consola (opcional)
+                    Write-Host "[!] $filePath : $($match.Line.Trim())" -ForegroundColor Red
                 }
             }
         }
 
     } catch {
-        
+        # Ignorar errores de lectura
     }
-
 }
+
+Write-Host "`n[+] Resultados guardados en: $outputFile" -ForegroundColor Green
